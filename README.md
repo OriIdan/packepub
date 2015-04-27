@@ -1,2 +1,1 @@
-# packedpub
-Creat an EPUB file based on directory contents
+Create an EPUB file based on directory contents
