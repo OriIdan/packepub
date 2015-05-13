@@ -29,7 +29,7 @@ $codeset = langinfo(CODESET);
 @ARGV = map { decode $codeset, $_ } @ARGV;
 
 # Get command line arguments
-$result = GetOptions("i=s" => \$newid, "s" => \$exifsign);
+$result = GetOptions("i=s" => \$newid);
 $filename = $ARGV[0];
 
 if($filename eq '') {
@@ -105,10 +105,6 @@ sub opf_packstart {
 	if($state == MANIFEST) {
 		if($elt eq 'item') {
 			$ref = $atts{'href'};
-			if($exifsign && ($atts{'id'} eq $coverid)) {
-				print "Add exif data to $oepbsdir$ref\n";
-				system("exiftool -creator=\"Helicon Books\" $oepbsdir$ref");
-			}
 			print "Adding file: $oepbsdir$ref\n";
 			$outzip->addFile("$oepbsdir$ref", "$oepbsdir$ref");
 		}
