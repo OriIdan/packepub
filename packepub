@@ -1,4 +1,8 @@
 #!/usr/bin/perl
+# Pack an EPUB or HBP package.
+# This is a smart pack, it packs the files using the OPF file to determine which files should be in the package.
+#
+# Written by: Ori Idan <ori@heliconbooks.com>
 use Getopt::Long;
 use XML::Parser;
 use File::Basename;
@@ -29,11 +33,11 @@ $codeset = langinfo(CODESET);
 @ARGV = map { decode $codeset, $_ } @ARGV;
 
 # Get command line arguments
-$result = GetOptions("i=s" => \$newid);
+$result = GetOptions("i=s" => \$newid, "s" => \$exifsign);
 $filename = $ARGV[0];
 
 if($filename eq '') {
-	print "Create EPUB from files in directory\n";
+	print "Create EPUB or HBP file from files in directory\n";
 	print "usage: packepub <filename>\n";
 	print "\n";
 	print "packepub looks at the current directory for 'mimetype' and META-INF if they don't exist it will issue an error and exit\n";
@@ -43,12 +47,24 @@ if($filename eq '') {
 	exit;
 }
 
-# Check if file has EPUB extenstion and remove it if needed
+# Check if file has EPUB extention and remove it if needed
 $filename =~ s/.epub//i;
+# Check if file has HBP extention and remove it if needed
+$filename =~ s/.hbp//i;
 
 if(! -e 'mimetype') {
 	print "mimetype does not exist\n";
 	exit;
+}
+
+# We found mimetype, check file type
+open(MIME, 'mimetype');
+$l = <MIME>;
+if($l =~ /epub/) {
+	$filename = "$filename.epub";
+}
+if($l =~ /hbp/) {
+	$filename = "$filename.hbp";
 }
 
 if(! -e 'META-INF/container.xml') {
@@ -80,8 +96,8 @@ sub handleOPF() {
 	print "#Pack handleOPF $rootfile\n";
 	($n, $oepbsdir, $ext) = fileparse($rootfile);
 	$parseopf->parsefile("$rootfile");
-	unless($outzip->writeToFileNamed("$filename.epub") == AZ_OK) {
-		print "Error writing to $filename.epub\n";
+	unless($outzip->writeToFileNamed("$filename") == AZ_OK) {
+		print "Error writing to $filename\n";
 	}
 }
 
@@ -105,6 +121,10 @@ sub opf_packstart {
 	if($state == MANIFEST) {
 		if($elt eq 'item') {
 			$ref = $atts{'href'};
+			if($exifsign && ($atts{'id'} eq $coverid)) {
+				print "Add exif data to $oepbsdir$ref\n";
+				system("exiftool -creator=\"Helicon Books\" $oepbsdir$ref");
+			}
 			print "Adding file: $oepbsdir$ref\n";
 			$outzip->addFile("$oepbsdir$ref", "$oepbsdir$ref");
 		}
